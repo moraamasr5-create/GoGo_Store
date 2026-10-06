@@ -4,22 +4,52 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
-import { ArrowLeft, Upload, CheckCircle2, ShieldCheck, AlertCircle, Copy, Check } from 'lucide-react';
+import {
+  ArrowLeft,
+  Upload,
+  CheckCircle2,
+  ShieldCheck,
+  AlertCircle,
+  Copy,
+  Check,
+  ChevronDown,
+  ChevronUp,
+  ShoppingBag,
+  Sparkles,
+  Phone,
+  User,
+  MapPin,
+  FileText,
+  X
+} from 'lucide-react';
 import { useCart } from '@/components/cart/CartContext';
 import { formatPrice } from '@/lib/utils';
 import { toast } from 'react-hot-toast';
 import { StorePublicSettings } from '@/types/database';
 import { Button } from '@/components/ui/Button';
 
+type PaymentTab = 'vodafone' | 'instapay';
+
 export default function CheckoutPage() {
   const router = useRouter();
   const { items, subtotal, depositAmount, remainingAmount, depositPercentage, clearCart, isLoading } = useCart();
 
   const [settings, setSettings] = useState<StorePublicSettings | null>(null);
+  const [activePaymentTab, setActivePaymentTab] = useState<PaymentTab>('vodafone');
   const [screenshotFile, setScreenshotFile] = useState<File | null>(null);
   const [screenshotPreview, setScreenshotPreview] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const [isMobileSummaryOpen, setIsMobileSummaryOpen] = useState<boolean>(false);
+
+  // Form Fields State
+  const [formDataState, setFormDataState] = useState({
+    customer_name: '',
+    customer_phone: '',
+    customer_email: '',
+    customer_address: '',
+    customer_notes: '',
+  });
 
   // Load public settings for payment numbers
   useEffect(() => {
@@ -36,6 +66,11 @@ export default function CheckoutPage() {
     }
     loadSettings();
   }, []);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormDataState(prev => ({ ...prev, [name]: value }));
+  };
 
   // Handle image select
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -56,11 +91,20 @@ export default function CheckoutPage() {
     setScreenshotPreview(URL.createObjectURL(file));
   };
 
+  const removeScreenshot = () => {
+    setScreenshotFile(null);
+    if (screenshotPreview) {
+      URL.revokeObjectURL(screenshotPreview);
+      setScreenshotPreview(null);
+    }
+  };
+
   const copyToClipboard = (text: string, key: string) => {
+    if (!text) return;
     navigator.clipboard.writeText(text);
     setCopiedKey(key);
     toast.success('تم النسخ بنجاح');
-    setTimeout(() => setCopiedKey(null), 2000);
+    setTimeout(() => setCopiedKey(null), 2500);
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -70,9 +114,28 @@ export default function CheckoutPage() {
       return;
     }
 
+    if (!formDataState.customer_name.trim()) {
+      toast.error('يرجى كتابة الاسم بالكامل');
+      return;
+    }
+
+    if (!formDataState.customer_phone.trim()) {
+      toast.error('يرجى إدخال رقم الهاتف');
+      return;
+    }
+
+    if (!formDataState.customer_address.trim()) {
+      toast.error('يرجى إدخال عنوان الشحن بالتفصيل');
+      return;
+    }
+
     setIsSubmitting(true);
-    const formElement = e.currentTarget;
-    const formData = new FormData(formElement);
+    const formPayload = new FormData();
+    formPayload.append('customer_name', formDataState.customer_name.trim());
+    formPayload.append('customer_phone', formDataState.customer_phone.trim());
+    formPayload.append('customer_email', formDataState.customer_email.trim());
+    formPayload.append('customer_address', formDataState.customer_address.trim());
+    formPayload.append('customer_notes', formDataState.customer_notes.trim());
 
     // Attach minimal items payload (NO client prices!)
     const itemsMinimal = items.map(item => ({
@@ -81,16 +144,16 @@ export default function CheckoutPage() {
       selected_color: item.selected_color || null,
       custom_attributes: item.custom_attributes || {},
     }));
-    formData.append('items', JSON.stringify(itemsMinimal));
+    formPayload.append('items', JSON.stringify(itemsMinimal));
 
     if (screenshotFile) {
-      formData.append('screenshot', screenshotFile);
+      formPayload.append('screenshot', screenshotFile);
     }
 
     try {
       const res = await fetch('/api/orders', {
         method: 'POST',
-        body: formData,
+        body: formPayload,
       });
 
       const data = await res.json();
@@ -115,7 +178,7 @@ export default function CheckoutPage() {
     return (
       <div className="max-w-xl mx-auto px-4 py-20 text-center">
         <div className="w-8 h-8 border-3 border-stone-800 dark:border-brass-400 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-        <p className="text-sm text-stone-500 dark:text-stone-400">جاري التحميل...</p>
+        <p className="text-xs sm:text-sm text-stone-500 dark:text-stone-400">جاري التحميل...</p>
       </div>
     );
   }
@@ -123,68 +186,146 @@ export default function CheckoutPage() {
   if (items.length === 0) {
     return (
       <div className="max-w-md mx-auto px-4 py-20 text-center">
+        <div className="w-16 h-16 rounded-2xl bg-sand-200/80 dark:bg-stone-800 text-stone-700 dark:text-sand-200 flex items-center justify-center mx-auto mb-4 shadow-xs">
+          <ShoppingBag className="w-8 h-8 text-stone-600 dark:text-brass-400" />
+        </div>
         <h1 className="text-xl font-bold text-stone-900 dark:text-white mb-2">لا توجد منتجات في السلة</h1>
-        <p className="text-sm text-stone-500 dark:text-stone-400 mb-6">يرجى إضافة قطع للطلب قبل الانتقال للدفع.</p>
-        <Link
-          href="/products"
-          className="inline-block px-5 py-2.5 rounded-xl bg-stone-900 dark:bg-brass-500 text-sand-50 dark:text-stone-950 text-xs font-bold"
-        >
-          تصفح المنتجات
+        <p className="text-xs sm:text-sm text-stone-500 dark:text-stone-400 mb-6">يرجى إضافة قطع للطلب قبل الانتقال للدفع.</p>
+        <Link href="/products">
+          <Button variant="primary" size="md">
+            تصفح معرض المنتجات
+          </Button>
         </Link>
       </div>
     );
   }
 
+  const totalQuantity = items.reduce((s, i) => s + i.quantity, 0);
+
   return (
-    <div className="max-w-5xl mx-auto px-3.5 sm:px-6 py-5 sm:py-8 md:py-12">
+    <div className="max-w-5xl mx-auto px-3.5 sm:px-6 py-5 sm:py-8 md:py-12 space-y-5 sm:space-y-6">
       
-      <div className="mb-5 sm:mb-8">
-        <h1 className="text-xl sm:text-3xl font-black text-stone-900 dark:text-white tracking-tight">
-          إتمام الطلب وسداد العربون
-        </h1>
-        <p className="text-xs sm:text-sm text-stone-500 dark:text-stone-400 mt-0.5 sm:mt-1">
-          خطوة بسيطة لتأكيد حجز وتنفيذ القطع يدويًا بتركيز ودقة وبأعلي جودة ✨
-        </p>
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-stone-200/80 dark:border-stone-800/80">
+        <div>
+          <h1 className="text-xl sm:text-3xl font-black text-stone-900 dark:text-white tracking-tight">
+            إتمام الطلب وسداد العربون
+          </h1>
+          <p className="text-[11px] sm:text-xs text-stone-500 dark:text-stone-400 mt-0.5">
+            سداد عربون {depositPercentage}% لتأكيد حجز وتنفيذ القطع يدوياً بأعلى جودة
+          </p>
+        </div>
+        <Link href="/cart" className="self-start sm:self-auto text-xs text-stone-500 dark:text-stone-400 hover:text-stone-800 dark:hover:text-stone-200 flex items-center gap-1">
+          <ArrowLeft className="w-3.5 h-3.5 rotate-180" />
+          <span>الرجوع للسلة</span>
+        </Link>
       </div>
 
-      <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-8 items-start">
+      {/* Mobile-First Early Summary Accordion (Visible on Mobile / Small screens) */}
+      <div className="block lg:hidden rounded-2xl bg-sand-100/90 dark:bg-stone-850 border border-sand-300/80 dark:border-stone-700/80 overflow-hidden shadow-xs">
+        <button
+          type="button"
+          onClick={() => setIsMobileSummaryOpen(!isMobileSummaryOpen)}
+          className="w-full p-3.5 flex items-center justify-between text-right text-xs"
+        >
+          <div className="flex items-center gap-2 min-w-0">
+            <ShoppingBag className="w-4 h-4 text-brass-600 dark:text-brass-400 shrink-0" />
+            <span className="font-extrabold text-stone-900 dark:text-white truncate">
+              ملخص الطلب ({totalQuantity} قطع)
+            </span>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="font-mono font-bold text-stone-900 dark:text-white">
+              العربون: <strong className="text-brass-600 dark:text-brass-400">{formatPrice(depositAmount)}</strong>
+            </span>
+            {isMobileSummaryOpen ? (
+              <ChevronUp className="w-4 h-4 text-stone-500" />
+            ) : (
+              <ChevronDown className="w-4 h-4 text-stone-500" />
+            )}
+          </div>
+        </button>
+
+        {isMobileSummaryOpen && (
+          <div className="p-3.5 pt-0 border-t border-sand-200 dark:border-stone-700 space-y-3">
+            <div className="space-y-2 max-h-48 overflow-y-auto pr-1 text-xs pt-2">
+              {items.map(({ product, quantity, selected_color, custom_attributes }, idx) => (
+                <div key={`${product.id}-${selected_color || ''}-${custom_attributes?.custom_text || ''}-${idx}`} className="flex items-center justify-between gap-2 py-1 border-b border-sand-200/50 dark:border-stone-800 last:border-0">
+                  <div className="min-w-0 flex-1">
+                    <p className="font-bold text-stone-900 dark:text-white truncate">{product.name_ar}</p>
+                    <div className="text-[10px] text-stone-500 dark:text-stone-400">
+                      {quantity} × {formatPrice(product.price)} {selected_color ? `(${selected_color})` : ''}
+                    </div>
+                  </div>
+                  <span className="font-mono font-bold text-stone-800 dark:text-stone-200 shrink-0">
+                    {formatPrice(product.price * quantity)}
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            <div className="text-xs space-y-1 pt-2 border-t border-sand-200 dark:border-stone-700">
+              <div className="flex justify-between text-stone-600 dark:text-stone-400">
+                <span>إجمالي المعروضات:</span>
+                <span className="font-mono font-bold text-stone-900 dark:text-white">{formatPrice(subtotal)}</span>
+              </div>
+              <div className="flex justify-between font-bold text-brass-700 dark:text-brass-400">
+                <span>العربون المطلوب ({depositPercentage}%):</span>
+                <span className="font-mono">{formatPrice(depositAmount)}</span>
+              </div>
+              <div className="flex justify-between text-stone-500 text-[11px]">
+                <span>المتبقي عند الاستلام:</span>
+                <span className="font-mono font-bold">{formatPrice(remainingAmount)}</span>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-7 items-start">
         
-        {/* Left/Main Column: Form Inputs */}
-        <div className="lg:col-span-7 space-y-4 sm:space-y-6">
+        {/* Left Column: Form & Payment Steps */}
+        <div className="lg:col-span-7 space-y-4 sm:space-y-5">
           
-          {/* 1. Customer Details Card */}
-          <div className="p-4 sm:p-6 rounded-2xl sm:rounded-3xl bg-white dark:bg-stone-900 border border-stone-200/90 dark:border-stone-800 shadow-sm space-y-3 sm:space-y-4">
-            <h2 className="text-sm font-black text-stone-900 dark:text-white flex items-center gap-2">
-              <span className="w-5 h-5 rounded-full bg-stone-900 dark:bg-brass-500 text-sand-50 dark:text-stone-950 text-[11px] font-mono flex items-center justify-center">1</span>
+          {/* Step 1: Customer Details */}
+          <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-stone-900 border border-stone-200/90 dark:border-stone-800 shadow-xs space-y-3.5">
+            <h2 className="text-xs sm:text-sm font-black text-stone-900 dark:text-white flex items-center gap-2">
+              <span className="w-5 h-5 rounded-full bg-stone-900 dark:bg-brass-500 text-sand-50 dark:text-stone-950 text-[11px] font-mono flex items-center justify-center font-bold">1</span>
               <span>بيانات التوصيل والتواصل</span>
             </h2>
 
             <div className="space-y-3">
               <div>
-                <label className="block text-xs font-bold text-stone-700 dark:text-stone-300 mb-1">
-                  الاسم بالكامل <span className="text-rose-500">*</span>
+                <label className="block text-xs font-bold text-stone-700 dark:text-stone-300 mb-1 flex items-center gap-1">
+                  <User className="w-3.5 h-3.5 text-stone-400" />
+                  <span>الاسم بالكامل <span className="text-rose-500">*</span></span>
                 </label>
                 <input
                   type="text"
                   name="customer_name"
+                  value={formDataState.customer_name}
+                  onChange={handleInputChange}
                   required
                   placeholder="مثال: منى أحمد"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-stone-200 dark:border-stone-700 text-xs focus:outline-none focus:ring-2 focus:ring-stone-900 dark:focus:ring-brass-400 bg-stone-50/50 dark:bg-stone-800 dark:text-white"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-stone-200 dark:border-stone-700 text-xs focus:outline-none focus:ring-2 focus:ring-stone-900 dark:focus:ring-brass-400 bg-stone-50/50 dark:bg-stone-800/60 dark:text-white transition-all"
                 />
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-stone-700 dark:text-stone-300 mb-1">
-                    رقم الهاتف / واتساب <span className="text-rose-500">*</span>
+                  <label className="block text-xs font-bold text-stone-700 dark:text-stone-300 mb-1 flex items-center gap-1">
+                    <Phone className="w-3.5 h-3.5 text-stone-400" />
+                    <span>رقم الهاتف / واتساب <span className="text-rose-500">*</span></span>
                   </label>
                   <input
                     type="tel"
                     name="customer_phone"
+                    value={formDataState.customer_phone}
+                    onChange={handleInputChange}
                     required
                     placeholder="010XXXXXXXX"
                     dir="ltr"
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-stone-200 dark:border-stone-700 text-xs focus:outline-none focus:ring-2 focus:ring-stone-900 dark:focus:ring-brass-400 bg-stone-50/50 dark:bg-stone-800 dark:text-white font-mono"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-stone-200 dark:border-stone-700 text-xs focus:outline-none focus:ring-2 focus:ring-stone-900 dark:focus:ring-brass-400 bg-stone-50/50 dark:bg-stone-800/60 dark:text-white font-mono transition-all"
                   />
                 </div>
 
@@ -195,124 +336,162 @@ export default function CheckoutPage() {
                   <input
                     type="email"
                     name="customer_email"
+                    value={formDataState.customer_email}
+                    onChange={handleInputChange}
                     placeholder="example@mail.com"
                     dir="ltr"
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-stone-200 dark:border-stone-700 text-xs focus:outline-none focus:ring-2 focus:ring-stone-900 dark:focus:ring-brass-400 bg-stone-50/50 dark:bg-stone-800 dark:text-white font-mono"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-stone-200 dark:border-stone-700 text-xs focus:outline-none focus:ring-2 focus:ring-stone-900 dark:focus:ring-brass-400 bg-stone-50/50 dark:bg-stone-800/60 dark:text-white font-mono transition-all"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-stone-700 dark:text-stone-300 mb-1">
-                  عنوان الشحن بالتفصيل <span className="text-rose-500">*</span>
+                <label className="block text-xs font-bold text-stone-700 dark:text-stone-300 mb-1 flex items-center gap-1">
+                  <MapPin className="w-3.5 h-3.5 text-stone-400" />
+                  <span>عنوان الشحن بالتفصيل <span className="text-rose-500">*</span></span>
                 </label>
                 <textarea
                   name="customer_address"
+                  value={formDataState.customer_address}
+                  onChange={handleInputChange}
                   required
                   rows={2}
                   placeholder="المحافظة، المنطقة، اسم الشارع، رقم العمارة والشقة..."
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-stone-200 dark:border-stone-700 text-xs focus:outline-none focus:ring-2 focus:ring-stone-900 dark:focus:ring-brass-400 bg-stone-50/50 dark:bg-stone-800 dark:text-white"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-stone-200 dark:border-stone-700 text-xs focus:outline-none focus:ring-2 focus:ring-stone-900 dark:focus:ring-brass-400 bg-stone-50/50 dark:bg-stone-800/60 dark:text-white transition-all"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-stone-700 dark:text-stone-300 mb-1">
-                  ملاحظات أو تخصيص للألوان (اختياري)
+                <label className="block text-xs font-bold text-stone-700 dark:text-stone-300 mb-1 flex items-center gap-1">
+                  <FileText className="w-3.5 h-3.5 text-stone-400" />
+                  <span>ملاحظات أو تخصيص للألوان (اختياري)</span>
                 </label>
                 <textarea
                   name="customer_notes"
+                  value={formDataState.customer_notes}
+                  onChange={handleInputChange}
                   rows={2}
                   placeholder="مثال: لو حابة تنسيق لون معين أو كتابة ملاحظة خاصة لتنفيذ طلبك..."
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-stone-200 dark:border-stone-700 text-xs focus:outline-none focus:ring-2 focus:ring-stone-900 dark:focus:ring-brass-400 bg-stone-50/50 dark:bg-stone-800 dark:text-white"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-stone-200 dark:border-stone-700 text-xs focus:outline-none focus:ring-2 focus:ring-stone-900 dark:focus:ring-brass-400 bg-stone-50/50 dark:bg-stone-800/60 dark:text-white transition-all"
                 />
               </div>
             </div>
           </div>
 
-          {/* 2. Payment & Deposit Transfer Instructions */}
-          <div className="p-6 rounded-3xl bg-white dark:bg-stone-900 border border-stone-200/90 dark:border-stone-800 shadow-sm space-y-4">
-            <h2 className="text-sm font-black text-stone-900 dark:text-white flex items-center gap-2">
-              <span className="w-5 h-5 rounded-full bg-stone-900 dark:bg-brass-500 text-sand-50 dark:text-stone-950 text-[11px] font-mono flex items-center justify-center">2</span>
-              <span>تحويل العربون المطلوب ({formatPrice(depositAmount)})</span>
+          {/* Step 2: Payment & Deposit Instructions */}
+          <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-stone-900 border border-stone-200/90 dark:border-stone-800 shadow-xs space-y-3.5">
+            <h2 className="text-xs sm:text-sm font-black text-stone-900 dark:text-white flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="w-5 h-5 rounded-full bg-stone-900 dark:bg-brass-500 text-sand-50 dark:text-stone-950 text-[11px] font-mono flex items-center justify-center font-bold">2</span>
+                <span>تحويل العربون المطلوب</span>
+              </div>
+              <span className="text-xs font-mono font-extrabold text-brass-700 dark:text-brass-400 bg-brass-500/10 px-2.5 py-0.5 rounded-lg">
+                {formatPrice(depositAmount)}
+              </span>
             </h2>
 
-            <p className="text-xs text-stone-600 dark:text-stone-300 leading-relaxed">
-              يرجى تحويل مبلغ العربون (أو القيمة كاملة إن أردت) عبر إحدى الوسائل التالية، ثم رفع صورة التحويل بالأسفل:
+            <p className="text-[11px] sm:text-xs text-stone-600 dark:text-stone-300 leading-relaxed">
+              اختاري وسيلة الدفع المناسبة لنسخ الرقم والتحويل:
             </p>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-              
-              {/* Vodafone Cash Box */}
-              <div className="p-4 rounded-2xl bg-emerald-50/50 dark:bg-emerald-950/20 border-2 border-emerald-500/40 dark:border-emerald-500/50 flex flex-col justify-between shadow-sm relative overflow-hidden">
-                <div className="absolute top-0 left-0 right-0 h-1 bg-emerald-500" />
-                <div>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <div className="flex items-center gap-1.5">
-                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
-                      <span className="text-xs font-black text-stone-900 dark:text-white">محفظة فودافون كاش</span>
-                    </div>
-                    <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 font-bold border border-emerald-300 dark:border-emerald-700">
-                      <CheckCircle2 className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
-                      <span>موثوق ويعمل ✔</span>
-                    </span>
+            {/* Payment Method Tabs */}
+            <div className="grid grid-cols-2 gap-2 p-1 bg-stone-100 dark:bg-stone-800 rounded-xl">
+              <button
+                type="button"
+                onClick={() => setActivePaymentTab('vodafone')}
+                className={`py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                  activePaymentTab === 'vodafone'
+                    ? 'bg-white dark:bg-stone-900 text-stone-900 dark:text-white shadow-xs'
+                    : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-white'
+                }`}
+              >
+                <span className="w-2 h-2 rounded-full bg-rose-600" />
+                <span>فودافون كاش</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setActivePaymentTab('instapay')}
+                className={`py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                  activePaymentTab === 'instapay'
+                    ? 'bg-white dark:bg-stone-900 text-stone-900 dark:text-white shadow-xs'
+                    : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-white'
+                }`}
+              >
+                <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                <span>إنستاباي (InstaPay)</span>
+              </button>
+            </div>
+
+            {/* Active Payment Details Card */}
+            {activePaymentTab === 'vodafone' ? (
+              <div className="p-4 rounded-xl bg-gradient-to-b from-stone-50 to-sand-50 dark:from-stone-850 dark:to-stone-900 border border-stone-200 dark:border-stone-700 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5 text-xs font-extrabold text-stone-900 dark:text-white">
+                    <span className="w-2.5 h-2.5 rounded-full bg-rose-600 animate-pulse" />
+                    <span>محفظة فودافون كاش الرسمية</span>
                   </div>
-                  <div className="bg-white dark:bg-stone-900/80 p-2.5 rounded-xl border border-emerald-200 dark:border-emerald-800/60 mt-2">
-                    <span className="text-[10px] font-bold text-stone-400 block mb-0.5">رقم المحفظة المعتمد:</span>
-                    <span className="font-mono text-base font-black text-emerald-700 dark:text-emerald-400 tracking-wider block" dir="ltr">
+                  <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 font-bold border border-emerald-200 dark:border-emerald-800">
+                    <CheckCircle2 className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
+                    <span>معتمد وشغال ✔</span>
+                  </span>
+                </div>
+
+                <div className="bg-white dark:bg-stone-900 p-3 rounded-xl border border-stone-200/80 dark:border-stone-700 flex items-center justify-between gap-3">
+                  <div>
+                    <span className="text-[10px] font-bold text-stone-400 block mb-0.5">رقم المحفظة:</span>
+                    <span className="font-mono text-base font-black text-stone-900 dark:text-white tracking-wider" dir="ltr">
                       {settings?.vodafone_cash || '010XXXXXXXX'}
                     </span>
                   </div>
+                  <button
+                    type="button"
+                    onClick={() => copyToClipboard(settings?.vodafone_cash || '', 'vodafone')}
+                    className="py-2 px-3 rounded-lg bg-stone-900 dark:bg-brass-500 hover:bg-stone-800 dark:hover:bg-brass-400 text-sand-50 dark:text-stone-950 text-xs font-bold flex items-center gap-1.5 transition-all active:scale-95 shrink-0"
+                  >
+                    {copiedKey === 'vodafone' ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                    <span>{copiedKey === 'vodafone' ? 'تم النسخ!' : 'نسخ الرقم'}</span>
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => copyToClipboard(settings?.vodafone_cash || '', 'vodafone')}
-                  className="mt-3 w-full py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-all shadow-xs active:scale-95"
-                >
-                  {copiedKey === 'vodafone' ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                  <span>{copiedKey === 'vodafone' ? 'تم نسخ الرقم بنجاح!' : 'نسخ رقم المحفظة'}</span>
-                </button>
               </div>
-
-              {/* InstaPay Box */}
-              <div className="p-4 rounded-2xl bg-emerald-50/50 dark:bg-emerald-950/20 border-2 border-emerald-500/40 dark:border-emerald-500/50 flex flex-col justify-between shadow-sm relative overflow-hidden">
-                <div className="absolute top-0 left-0 right-0 h-1 bg-emerald-500" />
-                <div>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <div className="flex items-center gap-1.5">
-                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
-                      <span className="text-xs font-black text-stone-900 dark:text-white">إنستاباي (InstaPay)</span>
-                    </div>
-                    <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 font-bold border border-emerald-300 dark:border-emerald-700">
-                      <CheckCircle2 className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
-                      <span>تحويل فوري موثوق ✔</span>
-                    </span>
+            ) : (
+              <div className="p-4 rounded-xl bg-gradient-to-b from-stone-50 to-sand-50 dark:from-stone-850 dark:to-stone-900 border border-stone-200 dark:border-stone-700 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5 text-xs font-extrabold text-stone-900 dark:text-white">
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                    <span>عنوان إنستاباي الرسمي (IPA)</span>
                   </div>
-                  <div className="bg-white dark:bg-stone-900/80 p-2.5 rounded-xl border border-emerald-200 dark:border-emerald-800/60 mt-2">
-                    <span className="text-[10px] font-bold text-stone-400 block mb-0.5">معرف التحويل الرسمي (IPA):</span>
-                    <span className="font-mono text-sm font-black text-emerald-700 dark:text-emerald-400 block truncate" dir="ltr">
+                  <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 font-bold border border-emerald-200 dark:border-emerald-800">
+                    <CheckCircle2 className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
+                    <span>تحويل لحظي معتمد ✔</span>
+                  </span>
+                </div>
+
+                <div className="bg-white dark:bg-stone-900 p-3 rounded-xl border border-stone-200/80 dark:border-stone-700 flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <span className="text-[10px] font-bold text-stone-400 block mb-0.5">معرف التحويل (IPA):</span>
+                    <span className="font-mono text-sm font-black text-stone-900 dark:text-white truncate block" dir="ltr">
                       {settings?.instapay || 'gogo@instapay'}
                     </span>
                   </div>
+                  <button
+                    type="button"
+                    onClick={() => copyToClipboard(settings?.instapay || '', 'instapay')}
+                    className="py-2 px-3 rounded-lg bg-stone-900 dark:bg-brass-500 hover:bg-stone-800 dark:hover:bg-brass-400 text-sand-50 dark:text-stone-950 text-xs font-bold flex items-center gap-1.5 transition-all active:scale-95 shrink-0"
+                  >
+                    {copiedKey === 'instapay' ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                    <span>{copiedKey === 'instapay' ? 'تم النسخ!' : 'نسخ المعرف'}</span>
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => copyToClipboard(settings?.instapay || '', 'instapay')}
-                  className="mt-3 w-full py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-all shadow-xs active:scale-95"
-                >
-                  {copiedKey === 'instapay' ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                  <span>{copiedKey === 'instapay' ? 'تم نسخ المعرف بنجاح!' : 'نسخ عنوان إنستاباي'}</span>
-                </button>
               </div>
+            )}
 
-            </div>
-
-            {/* 3. Screenshot Upload Box */}
+            {/* Step 3: Screenshot Upload Box */}
             <div className="pt-2">
               <label className="block text-xs font-bold text-stone-700 dark:text-stone-300 mb-2">
                 صورة إيصال التحويل (Screenshot) <span className="text-rose-500">*</span>
               </label>
 
-              <div className="border-2 border-dashed border-stone-300 dark:border-stone-700 rounded-2xl p-4 text-center hover:border-stone-400 dark:hover:border-stone-500 transition-colors bg-stone-50/50 dark:bg-stone-800/50">
+              <div className="border-2 border-dashed border-stone-300 dark:border-stone-700 rounded-2xl p-4 text-center hover:border-stone-400 dark:hover:border-stone-500 transition-colors bg-stone-50/50 dark:bg-stone-800/40">
                 <input
                   type="file"
                   id="screenshot-input"
@@ -323,7 +502,7 @@ export default function CheckoutPage() {
 
                 {screenshotPreview ? (
                   <div className="flex flex-col items-center gap-3">
-                    <div className="relative w-32 h-32 rounded-xl overflow-hidden border border-stone-200 dark:border-stone-700 shadow-sm">
+                    <div className="relative w-28 h-28 sm:w-32 sm:h-32 rounded-xl overflow-hidden border border-stone-200 dark:border-stone-700 shadow-sm">
                       <Image
                         src={screenshotPreview}
                         alt="إيصال التحويل"
@@ -331,24 +510,35 @@ export default function CheckoutPage() {
                         className="object-cover"
                       />
                     </div>
-                    <label
-                      htmlFor="screenshot-input"
-                      className="text-xs text-brass-600 dark:text-brass-400 font-bold cursor-pointer hover:underline"
-                    >
-                      تغيير الصورة المرفقة
-                    </label>
+                    <div className="flex items-center gap-3">
+                      <label
+                        htmlFor="screenshot-input"
+                        className="text-xs text-brass-700 dark:text-brass-400 font-bold cursor-pointer hover:underline"
+                      >
+                        تغيير الصورة
+                      </label>
+                      <span className="text-stone-300 dark:text-stone-700">•</span>
+                      <button
+                        type="button"
+                        onClick={removeScreenshot}
+                        className="text-xs text-rose-600 dark:text-rose-400 font-bold hover:underline flex items-center gap-0.5"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                        <span>إزالة</span>
+                      </button>
+                    </div>
                   </div>
                 ) : (
                   <label
                     htmlFor="screenshot-input"
-                    className="flex flex-col items-center justify-center gap-2 cursor-pointer py-4"
+                    className="flex flex-col items-center justify-center gap-2 cursor-pointer py-3.5"
                   >
                     <div className="w-10 h-10 rounded-xl bg-sand-200 dark:bg-stone-700 text-stone-700 dark:text-sand-100 flex items-center justify-center">
                       <Upload className="w-5 h-5 text-stone-700 dark:text-brass-400" />
                     </div>
                     <div className="text-xs">
-                      <span className="font-bold text-stone-900 dark:text-white">اضغط لرفع صورة الإيصال</span>
-                      <p className="text-stone-400 dark:text-stone-500 text-[11px] mt-0.5">JPG, PNG, WEBP حتى 5 ميجابايت</p>
+                      <span className="font-bold text-stone-900 dark:text-white">اضغط هنا لرفع صورة إيصال التحويل</span>
+                      <p className="text-stone-400 dark:text-stone-500 text-[10px] sm:text-[11px] mt-0.5">JPG, PNG, WEBP حتى 5 ميجابايت</p>
                     </div>
                   </label>
                 )}
@@ -359,26 +549,28 @@ export default function CheckoutPage() {
 
         </div>
 
-        {/* Right Column: Order Summary & Submit Button */}
+        {/* Right Column: Order Summary & Submit Button (Sticky on Desktop) */}
         <div className="lg:col-span-5 space-y-4 sticky top-20 sm:top-24">
           
-          <div className="p-4 sm:p-6 rounded-2xl sm:rounded-3xl bg-white dark:bg-stone-900 border border-stone-200/90 dark:border-stone-800 shadow-sm space-y-3 sm:space-y-4">
-            <h2 className="text-xs sm:text-sm font-black text-stone-900 dark:text-white border-b border-stone-100 dark:border-stone-800 pb-2.5 sm:pb-3">
-              مراجعة الطلب ({items.reduce((s, i) => s + i.quantity, 0)} قطعة)
+          <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-stone-900 border border-stone-200/90 dark:border-stone-800 shadow-sm space-y-3.5">
+            <h2 className="text-xs sm:text-sm font-black text-stone-900 dark:text-white border-b border-stone-100 dark:border-stone-800 pb-2.5 flex items-center justify-between">
+              <span>مراجعة الطلب</span>
+              <span className="font-mono text-xs text-stone-500">{totalQuantity} قطعة</span>
             </h2>
 
             {/* Items mini list */}
-            <div className="space-y-2.5 max-h-56 overflow-y-auto pr-1">
+            <div className="space-y-2.5 max-h-52 overflow-y-auto pr-1">
               {items.map(({ product, quantity, selected_color, custom_attributes }, idx) => (
                 <div key={`${product.id}-${selected_color || ''}-${custom_attributes?.custom_text || ''}-${idx}`} className="flex items-center justify-between text-xs gap-2">
                   <div className="flex-1 min-w-0 pr-1">
-                    <p className="font-bold text-stone-900 dark:text-white line-clamp-1">{product.name_ar}</p>
-                    <div className="text-[10px] sm:text-[11px] text-stone-400 truncate">
+                    <p className="font-bold text-stone-900 dark:text-white truncate">{product.name_ar}</p>
+                    <div className="text-[10px] text-stone-400 truncate">
                       {quantity} × {formatPrice(product.price)} {selected_color ? `(${selected_color})` : ''}
                     </div>
                     {custom_attributes?.custom_text && (
-                      <div className="text-[10px] text-brass-700 dark:text-brass-400 font-medium truncate">
-                        ✨ نقش: {custom_attributes.custom_text}
+                      <div className="text-[10px] text-brass-700 dark:text-brass-400 font-medium truncate flex items-center gap-0.5">
+                        <Sparkles className="w-2.5 h-2.5" />
+                        <span>نقش: {custom_attributes.custom_text}</span>
                       </div>
                     )}
                   </div>
@@ -389,17 +581,17 @@ export default function CheckoutPage() {
               ))}
             </div>
 
-            <div className="border-t border-stone-100 dark:border-stone-800 pt-2.5 sm:pt-3 space-y-2 text-xs">
+            <div className="border-t border-stone-100 dark:border-stone-800 pt-2.5 space-y-2 text-xs">
               <div className="flex justify-between items-center text-stone-600 dark:text-stone-400">
                 <span>إجمالي الطلب:</span>
                 <span className="font-mono font-bold text-stone-900 dark:text-white whitespace-nowrap">{formatPrice(subtotal)}</span>
               </div>
-              <div className="flex justify-between items-center font-bold text-stone-900 dark:text-white bg-sand-100 dark:bg-stone-800 p-2.5 sm:p-3 rounded-xl border border-sand-200 dark:border-stone-700">
+              <div className="flex justify-between items-center font-bold text-stone-900 dark:text-white bg-sand-100/90 dark:bg-stone-800 p-2.5 rounded-xl border border-sand-200 dark:border-stone-700">
                 <span className="text-[11px] sm:text-xs">العربون المطلوب ({depositPercentage}%):</span>
                 <span className="font-mono text-brass-600 dark:text-brass-400 whitespace-nowrap">{formatPrice(depositAmount)}</span>
               </div>
-              <div className="flex justify-between items-center text-stone-500 dark:text-stone-400">
-                <span>المتبقي عند الشحن:</span>
+              <div className="flex justify-between items-center text-stone-500 dark:text-stone-400 text-[11px]">
+                <span>المتبقي عند الاستلام:</span>
                 <span className="font-mono font-bold whitespace-nowrap">{formatPrice(remainingAmount)}</span>
               </div>
             </div>
@@ -415,14 +607,14 @@ export default function CheckoutPage() {
               تأكيد الطلب وإرسال الإيصال
             </Button>
 
-            <div className="text-[10px] sm:text-[11px] text-stone-500 dark:text-stone-400 space-y-1.5 pt-2 border-t border-stone-100 dark:border-stone-800">
+            <div className="text-[10px] text-stone-500 dark:text-stone-400 space-y-1.5 pt-2 border-t border-stone-100 dark:border-stone-800">
               <div className="flex items-center gap-1.5">
                 <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                <span>يتم مراجعة الإيصال وتأكيد بدء الصب خلال ساعتين.</span>
+                <span>يتم مراجعة الإيصال وتأكيد بدء الصب والتنفيذ فوراً.</span>
               </div>
               <div className="flex items-center gap-1.5">
-                <AlertCircle className="w-3.5 h-3.5 text-brass-500 shrink-0" />
-                <span>ستحصل على رقم طلب لتتبع مراحل الصب والشحن فوراً.</span>
+                <AlertCircle className="w-3.5 h-3.5 text-brass-600 dark:text-brass-400 shrink-0" />
+                <span>ستحصل على رقم طلب لتتبع مراحل الصب والشحن لحظياً.</span>
               </div>
             </div>
 

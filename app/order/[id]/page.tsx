@@ -3,9 +3,18 @@ import Link from 'next/link';
 import { Clock } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { getPublicSettings } from '@/lib/supabase';
+import { Metadata } from 'next';
 import OrderTrackingClient from './OrderTrackingClient';
 
 export const revalidate = 0;
+
+export const metadata: Metadata = {
+  title: 'تتبع حالة الطلب',
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
 
 interface OrderPageProps {
   params: {

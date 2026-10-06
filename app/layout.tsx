@@ -16,15 +16,62 @@ const cairo = Cairo({
   display: "swap",
 });
 
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://gogodesigns.com';
+
 export const metadata: Metadata = {
-  title: "Gogo Concrete | تحف وديكورات مصنوعة بتركيز ودقة وبأعلي جودة 🤍",
-  description: "شغل كونكريت / ديكوري يدوي من البيت بأشكال كتير. تصميمات مودرن وبسيطة وتشطيب ناعم وألوان هادية تناسب أي بيت.",
-  keywords: ["كونكريت", "هاند ميد", "ديكورات يدوية", "صواني ديكورية", "كوسترات", "مباخر", "حوامل شموع", "علب مجوهرات", "تحف", "Gogo Concrete"],
+  metadataBase: new URL(siteUrl),
+  title: {
+    default: "Gogo Designs | تحف وديكورات منزلية مصنوعة يدوياً بتركيز ودقة 🤍",
+    template: "%s | Gogo Designs",
+  },
+  description: "متجر Gogo Designs للتحف والديكورات المنزلية وأطقم الهدايا المصبوبة يدوياً. صواني تقديم، مباخر، شمعدانات، كوسترات، وفازات بتشطيب ناعم وألوان هادئة ونقش مخصص بالاسم.",
+  keywords: [
+    "صواني ديكورية",
+    "كوسترات",
+    "شمعدانات",
+    "مباخر",
+    "فازات",
+    "أطقم هدايا",
+    "ديكور منزلي",
+    "قطع مخصصة",
+    "أسماء مخصصة",
+    "هاند ميد",
+    "تحف منزلية",
+    "Gogo Designs",
+  ],
+  authors: [{ name: "Gogo Designs" }],
+  creator: "Gogo Designs",
+  publisher: "Gogo Designs",
+  formatDetection: {
+    email: false,
+    address: false,
+    telephone: false,
+  },
+  alternates: {
+    canonical: "/",
+  },
   openGraph: {
-    title: "Gogo Concrete | تحف وديكورات كونكريت معمولـة بتركيز ودقة وبأعلي جودة 🤍",
-    description: "شغل كونكريت / ديكوري يدوي من البيت بأشكال كتير، تشطيب ناعم وألوان هادية ومودرن.",
-    type: "website",
+    title: "Gogo Designs | تحف وديكورات منزلية مصنوعة يدوياً بتركيز ودقة 🤍",
+    description: "قطع ديكورية وأطقم هدايا مصبوبة يدوياً بتشطيب ناعم وألوان هادئة ونقش أسماء مخصص لبيتك ومناسباتك.",
+    url: siteUrl,
+    siteName: "Gogo Designs",
     locale: "ar_EG",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Gogo Designs | تحف وديكورات منزلية هاند ميد",
+    description: "قطع ديكورية وأطقم هدايا مصبوبة يدوياً بتشطيب ناعم وألوان هادئة.",
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
   },
 };
 
@@ -38,8 +85,51 @@ export default async function RootLayout({
 }>) {
   const settings = await getPublicSettings();
 
+  const organizationJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "name": settings.store_name || "Gogo Designs",
+    "url": siteUrl,
+    "logo": settings.header_logo_url || `${siteUrl}/logo.png`,
+    "description": "براند مصري متخصص في ابتكار التحف والديكورات المنزلية وأطقم الهدايا المصبوبة يدوياً بأعلى معايير الجودة والنعومة.",
+    "contactPoint": {
+      "@type": "ContactPoint",
+      "telephone": settings.whatsapp_number ? `+${settings.whatsapp_number.replace(/[^0-9]/g, '')}` : "+201000000000",
+      "contactType": "customer service",
+      "areaServed": "EG",
+      "availableLanguage": ["Arabic", "English"]
+    }
+  };
+
+  const webSiteJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": settings.store_name || "Gogo Designs",
+    "url": siteUrl,
+    "potentialAction": {
+      "@type": "SearchAction",
+      "target": `${siteUrl}/products?q={search_term_string}`,
+      "query-input": "required name=search_term_string"
+    }
+  };
+
   return (
-    <html lang="ar" dir="rtl" className={`scroll-smooth ${cairo.variable}`}>
+    <html lang="ar" dir="rtl" className={`scroll-smooth ${cairo.variable}`} suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var s=localStorage.getItem('gogo_theme');var d=window.matchMedia('(prefers-color-scheme: dark)').matches;if(s==='dark'||(!s&&d)){document.documentElement.classList.add('dark');}else{document.documentElement.classList.remove('dark');}}catch(e){}})();`,
+          }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(webSiteJsonLd) }}
+        />
+      </head>
       <body className="min-h-screen flex flex-col font-sans bg-sand-50 dark:bg-stone-950 text-stone-900 dark:text-stone-100 antialiased selection:bg-brass-400/30 selection:text-stone-900 dark:selection:text-white transition-colors duration-300">
         <ThemeProvider>
           <Toaster
@@ -86,7 +176,11 @@ export default async function RootLayout({
             </div>
           ) : (
             <CartProvider>
-              <Header logoUrl={settings.header_logo_url} storeName={settings.store_name} />
+              <Header 
+                logoUrl={settings.header_logo_url} 
+                storeName={settings.store_name}
+                whatsappNumber={settings.whatsapp_number}
+              />
               <main className="flex-1">
                 {children}
               </main>

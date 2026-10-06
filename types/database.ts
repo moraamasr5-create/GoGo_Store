@@ -1,6 +1,6 @@
 // types/database.ts
 
-export type CategoryKey = 'trays' | 'coasters' | 'planters' | 'candle_holders' | 'decor';
+export type CategoryKey = 'trays' | 'coasters' | 'planters' | 'candle_holders' | 'decor' | 'gift_sets' | 'ready_sets';
 
 export interface Product {
   id: string;
@@ -20,6 +20,8 @@ export interface Product {
   allow_personalization?: boolean;
   personalization_label?: string | null;
   personalization_max_chars?: number;
+  collection?: string | null;
+  is_unfinished?: boolean;
   created_at: string;
   updated_at: string;
 }

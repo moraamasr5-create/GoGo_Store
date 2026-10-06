@@ -1,0 +1,82 @@
+import React from 'react';
+import { Metadata } from 'next';
+import { ShieldCheck, Lock, Eye } from 'lucide-react';
+
+export const metadata: Metadata = {
+  title: 'سياسة الخصوصية وأمان البيانات | Gogo Designs',
+  description: 'تعرف على سياسة الخصوصية في متجر Gogo Designs وكيفية حماية بياناتك الشخصية وبيانات التوصيل والتواصل بأعلى درجات السرية.',
+  alternates: {
+    canonical: '/privacy',
+  },
+};
+
+export default function PrivacyPage() {
+  return (
+    <div className="max-w-4xl mx-auto px-3.5 sm:px-6 py-6 sm:py-12 md:py-16 space-y-8">
+      
+      {/* Header */}
+      <div className="text-center space-y-2.5 max-w-xl mx-auto">
+        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-sand-200/80 dark:bg-stone-800 text-brass-700 dark:text-brass-300 text-xs font-bold shadow-xs">
+          <ShieldCheck className="w-3.5 h-3.5 text-brass-500" />
+          <span>خصوصية وأمان بياناتك</span>
+        </div>
+        <h1 className="text-2xl sm:text-4xl font-black text-stone-900 dark:text-white tracking-tight">
+          سياسة الخصوصية
+        </h1>
+        <p className="text-xs sm:text-sm text-stone-600 dark:text-stone-300">
+          نلتزم بحماية خصوصيتك وضمان سرية كافة البيانات التي تشاركينها معنا أثناء إتمام طلبك.
+        </p>
+      </div>
+
+      <div className="p-6 sm:p-8 rounded-2xl sm:rounded-3xl bg-white dark:bg-stone-900 border border-stone-200/90 dark:border-stone-800 shadow-xs space-y-6 text-xs sm:text-sm text-stone-600 dark:text-stone-300 leading-relaxed">
+        
+        <section className="space-y-2">
+          <h2 className="text-sm sm:text-base font-extrabold text-stone-900 dark:text-white flex items-center gap-2">
+            <Lock className="w-4 h-4 text-brass-600 dark:text-brass-400" />
+            <span>1. البيانات التي نجمعها</span>
+          </h2>
+          <p>
+            نجمع فقط البيانات الأساسية اللازمة لتجهيز وشحن طلبك، وتشمل: الاسم، رقم الهاتف للتواصل عبر واتساب، عنوان الشحن بالتفصيل، وأي ملاحظات خاصة بتنسيق الألوان أو نقش الأسماء.
+          </p>
+        </section>
+
+        <section className="space-y-2 pt-4 border-t border-stone-100 dark:border-stone-800">
+          <h2 className="text-sm sm:text-base font-extrabold text-stone-900 dark:text-white flex items-center gap-2">
+            <Eye className="w-4 h-4 text-brass-600 dark:text-brass-400" />
+            <span>2. كيف نستخدم بياناتك</span>
+          </h2>
+          <p>
+            تُستخدم بياناتك حصرياً للأغراض التالية:
+          </p>
+          <ul className="list-disc pr-4 space-y-1 text-xs text-stone-600 dark:text-stone-300">
+            <li>تنفيذ وتجهيز القطع وفقاً لتفضيلاتك.</li>
+            <li>تزويد مندوب شركة الشحن بالعنوان ورقم الهاتف للتسليم.</li>
+            <li>إرسال تحديثات تتبع الطلب وتأكيد استلام العربون عبر واتساب.</li>
+          </ul>
+        </section>
+
+        <section className="space-y-2 pt-4 border-t border-stone-100 dark:border-stone-800">
+          <h2 className="text-sm sm:text-base font-extrabold text-stone-900 dark:text-white flex items-center gap-2">
+            <ShieldCheck className="w-4 h-4 text-brass-600 dark:text-brass-400" />
+            <span>3. عدم مشاركة البيانات</span>
+          </h2>
+          <p>
+            نتعهد بعدم بيع أو تأجير أو مشاركة أي من بياناتك الشخصية مع أي أطراف ثالثة لأغراض دعائية أو إعلانية. بياناتك تبقى في سرية تامة.
+          </p>
+        </section>
+
+        <section className="space-y-2 pt-4 border-t border-stone-100 dark:border-stone-800">
+          <h2 className="text-sm sm:text-base font-extrabold text-stone-900 dark:text-white flex items-center gap-2">
+            <Lock className="w-4 h-4 text-brass-600 dark:text-brass-400" />
+            <span>4. صور إيصالات التحويل</span>
+          </h2>
+          <p>
+            يتم تخزين صور إيصالات التحويل المرفوعة عبر خوادم آمنة ومشفرة، وتُستخدم فقط من قِبل إدارة المتجر لمطابقة مبالغ العربون وتأكيد بدء الصب.
+          </p>
+        </section>
+
+      </div>
+
+    </div>
+  );
+}

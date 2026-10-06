@@ -19,15 +19,36 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   },
 });
 
-export async function getActiveProducts(category?: string): Promise<Product[]> {
+export interface ProductQueryFilters {
+  category?: string;
+  collection?: string;
+  is_unfinished?: boolean;
+  limit?: number;
+}
+
+export async function getActiveProducts(params?: string | ProductQueryFilters): Promise<Product[]> {
+  const filters: ProductQueryFilters = typeof params === 'string' ? { category: params } : (params || {});
+
   let query = supabase
     .from('products')
     .select('*')
     .eq('is_active', true)
     .order('created_at', { ascending: false });
 
-  if (category && category !== 'all') {
-    query = query.eq('category', category);
+  if (filters.category && filters.category !== 'all') {
+    query = query.eq('category', filters.category);
+  }
+
+  if (filters.collection) {
+    query = query.eq('collection', filters.collection);
+  }
+
+  if (filters.is_unfinished !== undefined) {
+    query = query.eq('is_unfinished', filters.is_unfinished);
+  }
+
+  if (filters.limit && filters.limit > 0) {
+    query = query.limit(filters.limit);
   }
 
   const { data, error } = await query;

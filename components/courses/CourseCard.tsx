@@ -29,9 +29,9 @@ export function CourseCard({ course }: CourseCardProps) {
       <div className="absolute inset-0 rounded-3xl pointer-events-none transition-all duration-500 border border-stone-200/90 dark:border-stone-800/90 shadow-md shadow-stone-900/5 dark:shadow-stone-950/40 group-hover:border-brass-500/50 dark:group-hover:border-brass-400/50 group-hover:shadow-2xl group-hover:shadow-stone-900/10 dark:group-hover:shadow-stone-950/80" />
 
       {/* Surface layer */}
-      <div className="relative flex flex-col lg:flex-row flex-1 bg-white dark:bg-[#181715] rounded-3xl overflow-hidden">
+      <div className="relative flex flex-col lg:flex-row flex-1 bg-white dark:bg-stone-900 rounded-3xl overflow-hidden">
         {/* Visual / Cover */}
-        <div className="relative lg:w-2/5 aspect-[16/10] lg:aspect-auto overflow-hidden bg-sand-100 dark:bg-[#201F1B]">
+        <div className="relative lg:w-2/5 aspect-[16/10] lg:aspect-auto overflow-hidden bg-sand-100 dark:bg-stone-800">
           <Image
             src={course.imageUrl}
             alt={course.title}

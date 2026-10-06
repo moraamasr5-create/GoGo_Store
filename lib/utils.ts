@@ -18,6 +18,8 @@ export function getCategoryLabel(category: CategoryKey): string {
     planters: "أحواض نباتات",
     candle_holders: "حوامل شموع ومباخر",
     decor: "تحف وفازات",
+    gift_sets: "أطقم هدايا جاهزة",
+    ready_sets: "أطقم ديكورات جاهزة",
   };
   return map[category] || category;
 }
