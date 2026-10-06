@@ -79,6 +79,7 @@ export default function CheckoutPage() {
       product_id: item.product_id,
       quantity: item.quantity,
       selected_color: item.selected_color || null,
+      custom_attributes: item.custom_attributes || {},
     }));
     formData.append('items', JSON.stringify(itemsMinimal));
 
@@ -100,7 +101,8 @@ export default function CheckoutPage() {
 
       toast.success('تم استلام طلبك بنجاح! ✨');
       clearCart();
-      router.push(`/order/${data.order_number}`);
+      const orderNumber = data.order?.order_number || data.order_number;
+      router.push(`/order/${orderNumber}`);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'حدث خطأ أثناء إتمام الطلب';
       toast.error(message);
@@ -367,13 +369,18 @@ export default function CheckoutPage() {
 
             {/* Items mini list */}
             <div className="space-y-2.5 max-h-56 overflow-y-auto pr-1">
-              {items.map(({ product, quantity, selected_color }) => (
-                <div key={`${product.id}-${selected_color || ''}`} className="flex items-center justify-between text-xs gap-2">
+              {items.map(({ product, quantity, selected_color, custom_attributes }, idx) => (
+                <div key={`${product.id}-${selected_color || ''}-${custom_attributes?.custom_text || ''}-${idx}`} className="flex items-center justify-between text-xs gap-2">
                   <div className="flex-1 min-w-0 pr-1">
                     <p className="font-bold text-stone-900 dark:text-white line-clamp-1">{product.name_ar}</p>
-                    <p className="text-[10px] sm:text-[11px] text-stone-400 truncate">
+                    <div className="text-[10px] sm:text-[11px] text-stone-400 truncate">
                       {quantity} × {formatPrice(product.price)} {selected_color ? `(${selected_color})` : ''}
-                    </p>
+                    </div>
+                    {custom_attributes?.custom_text && (
+                      <div className="text-[10px] text-brass-700 dark:text-brass-400 font-medium truncate">
+                        ✨ نقش: {custom_attributes.custom_text}
+                      </div>
+                    )}
                   </div>
                   <span className="font-mono font-bold text-stone-800 dark:text-stone-200 whitespace-nowrap shrink-0">
                     {formatPrice(product.price * quantity)}

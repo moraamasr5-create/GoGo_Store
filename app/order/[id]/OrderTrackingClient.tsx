@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Clock, Check, MessageCircle, ArrowLeft, RefreshCw } from 'lucide-react';
+import { Clock, Check, MessageCircle, ArrowLeft, RefreshCw, Sparkles } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { formatPrice } from '@/lib/utils';
 import { generateWhatsAppOrderUrl } from '@/lib/whatsapp';
@@ -189,6 +189,43 @@ export default function OrderTrackingClient({ initialOrder, settings }: OrderTra
           </div>
         )}
       </div>
+
+      {/* Order Items Breakdown */}
+      {order.items && Array.isArray(order.items) && order.items.length > 0 && (
+        <div className="p-4 sm:p-6 rounded-2xl sm:rounded-3xl bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 shadow-sm mb-6 sm:mb-8 space-y-3 sm:space-y-4">
+          <h2 className="text-xs sm:text-sm font-black text-stone-900 dark:text-white border-b border-stone-100 dark:border-stone-800 pb-2.5">
+            القطع المشمولة بالطلب ({order.items.length})
+          </h2>
+
+          <div className="space-y-2.5">
+            {order.items.map((item: any, idx: number) => (
+              <div key={idx} className="flex items-start justify-between text-xs gap-3 p-3 rounded-xl bg-stone-50 dark:bg-stone-800/60 border border-stone-100 dark:border-stone-800">
+                <div className="flex-1 min-w-0">
+                  <p className="font-bold text-stone-900 dark:text-white text-xs sm:text-sm">{item.product_name_ar}</p>
+                  <div className="text-[11px] text-stone-500 dark:text-stone-400 mt-0.5">
+                    الكمية: <span className="font-mono font-bold">{item.quantity}</span>
+                    {item.selected_color && <span> • اللون: {item.selected_color}</span>}
+                  </div>
+                  {item.custom_attributes?.custom_text && (
+                    <div className="text-[11px] text-brass-700 dark:text-brass-400 font-semibold mt-1 flex items-center gap-1 bg-brass-500/10 dark:bg-brass-500/15 px-2 py-0.5 rounded-md w-fit">
+                      <Sparkles className="w-3 h-3 text-brass-600 dark:text-brass-400 shrink-0" />
+                      <span>النقش المخصص: <strong className="font-bold text-stone-900 dark:text-white">{item.custom_attributes.custom_text}</strong></span>
+                    </div>
+                  )}
+                </div>
+                <div className="text-right shrink-0">
+                  <span className="font-mono font-bold text-stone-900 dark:text-white text-xs sm:text-sm block">
+                    {formatPrice(item.total_price)}
+                  </span>
+                  <span className="text-[10px] text-stone-400 font-mono">
+                    ({formatPrice(item.unit_price)} للقطعة)
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Order Summary & Customer Details */}
       <div className="p-6 sm:p-8 rounded-3xl bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 shadow-sm space-y-6">

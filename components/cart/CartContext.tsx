@@ -1,15 +1,15 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { Product, CartItem, CartStorageItem } from '@/types/database';
+import { Product, CartItem, CartStorageItem, ItemCustomAttributes } from '@/types/database';
 import { toast } from 'react-hot-toast';
 import { supabase } from '@/lib/supabase';
 
 interface CartContextType {
   items: CartItem[];
-  addItem: (product: Product, quantity?: number, selected_color?: string) => void;
-  removeItem: (productId: string) => void;
-  updateQuantity: (productId: string, quantity: number) => void;
+  addItem: (product: Product, quantity?: number, selected_color?: string, custom_attributes?: ItemCustomAttributes) => void;
+  removeItem: (productId: string, selected_color?: string, custom_attributes?: ItemCustomAttributes) => void;
+  updateQuantity: (productId: string, quantity: number, selected_color?: string, custom_attributes?: ItemCustomAttributes) => void;
   clearCart: () => void;
   itemCount: number;
   subtotal: number;
@@ -22,6 +22,27 @@ interface CartContextType {
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
 const CART_STORAGE_KEY = 'gogo_concrete_cart_v1';
+
+function areCustomAttributesEqual(a?: ItemCustomAttributes, b?: ItemCustomAttributes): boolean {
+  const textA = (a?.custom_text || '').trim();
+  const textB = (b?.custom_text || '').trim();
+  const finishA = (a?.finish || '').trim();
+  const finishB = (b?.finish || '').trim();
+  return textA === textB && finishA === finishB;
+}
+
+function isSameCartItem(
+  item: CartStorageItem | CartItem,
+  productId: string,
+  selectedColor?: string,
+  customAttributes?: ItemCustomAttributes
+): boolean {
+  if (item.product_id !== productId) return false;
+  const colorA = item.selected_color || '';
+  const colorB = selectedColor || '';
+  if (colorA !== colorB) return false;
+  return areCustomAttributesEqual(item.custom_attributes, customAttributes);
+}
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
@@ -87,6 +108,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
               product_id: prod.id,
               quantity: Math.min(stored.quantity, prod.stock),
               selected_color: stored.selected_color,
+              custom_attributes: stored.custom_attributes,
               product: prod,
             });
           }
@@ -110,18 +132,26 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       product_id: item.product_id,
       quantity: item.quantity,
       selected_color: item.selected_color,
+      custom_attributes: item.custom_attributes,
     }));
     localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(minimalData));
   }, [items, isLoading]);
 
-  const addItem = (product: Product, quantity: number = 1, selected_color?: string) => {
+  const addItem = (
+    product: Product,
+    quantity: number = 1,
+    selected_color?: string,
+    custom_attributes?: ItemCustomAttributes
+  ) => {
     if (product.stock <= 0) {
       toast.error('عذراً، هذه القطعة نفذت من المخزون');
       return;
     }
 
     setItems(prev => {
-      const existingIndex = prev.findIndex(item => item.product_id === product.id && item.selected_color === selected_color);
+      const existingIndex = prev.findIndex(item =>
+        isSameCartItem(item, product.id, selected_color, custom_attributes)
+      );
       if (existingIndex > -1) {
         const current = prev[existingIndex];
         const newQty = Math.min(current.quantity + quantity, product.stock);
@@ -136,36 +166,63 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       }
 
       toast.success(`تمت إضافة "${product.name_ar}" إلى السلة`);
-      return [...prev, {
-        product_id: product.id,
-        quantity: Math.min(quantity, product.stock),
-        selected_color,
-        product,
-      }];
+      return [
+        ...prev,
+        {
+          product_id: product.id,
+          quantity: Math.min(quantity, product.stock),
+          selected_color,
+          custom_attributes,
+          product,
+        },
+      ];
     });
   };
 
-  const removeItem = (productId: string) => {
-    setItems(prev => prev.filter(item => item.product_id !== productId));
+  const removeItem = (
+    productId: string,
+    selected_color?: string,
+    custom_attributes?: ItemCustomAttributes
+  ) => {
+    setItems(prev => {
+      if (selected_color !== undefined || custom_attributes !== undefined) {
+        return prev.filter(item => !isSameCartItem(item, productId, selected_color, custom_attributes));
+      }
+      return prev.filter(item => item.product_id !== productId);
+    });
     toast.success('تمت إزالة المنتج من السلة');
   };
 
-  const updateQuantity = (productId: string, quantity: number) => {
+  const updateQuantity = (
+    productId: string,
+    quantity: number,
+    selected_color?: string,
+    custom_attributes?: ItemCustomAttributes
+  ) => {
     if (quantity <= 0) {
-      removeItem(productId);
+      removeItem(productId, selected_color, custom_attributes);
       return;
     }
 
-    setItems(prev => prev.map(item => {
-      if (item.product_id === productId) {
-        const finalQty = Math.min(quantity, item.product.stock);
-        if (quantity > item.product.stock) {
-          toast.error(`الكمية القصوى المتاحة هي ${item.product.stock}`);
+    setItems(prev => {
+      let matched = false;
+      return prev.map(item => {
+        const matches =
+          selected_color !== undefined || custom_attributes !== undefined
+            ? isSameCartItem(item, productId, selected_color, custom_attributes)
+            : item.product_id === productId && !matched;
+
+        if (matches) {
+          matched = true;
+          const finalQty = Math.min(quantity, item.product.stock);
+          if (quantity > item.product.stock) {
+            toast.error(`الكمية القصوى المتاحة هي ${item.product.stock}`);
+          }
+          return { ...item, quantity: finalQty };
         }
-        return { ...item, quantity: finalQty };
-      }
-      return item;
-    }));
+        return item;
+      });
+    });
   };
 
   const clearCart = () => {

@@ -16,15 +16,23 @@ export default function ProductDetailClient({ product }: ProductDetailClientProp
   const colors = Array.isArray(product.colors) ? product.colors : [];
   
   const [selectedColor, setSelectedColor] = useState<string>(colors.length > 0 ? colors[0] : '');
+  const [customText, setCustomText] = useState<string>('');
   const [quantity, setQuantity] = useState<number>(1);
   const [justAdded, setJustAdded] = useState<boolean>(false);
 
   const isOutOfStock = product.stock <= 0;
   const isInCart = items.some(item => item.product_id === product.id);
 
+  const maxChars = product.personalization_max_chars ?? 50;
+  const personalizationLabel = product.personalization_label || 'كتابة الأسماء أو عبارة الإهداء (تخصيص مجاني):';
+
   const handleAddToCart = () => {
     if (isOutOfStock) return;
-    addItem(product, quantity, selectedColor || undefined);
+    const customAttributes = product.allow_personalization && customText.trim().length > 0
+      ? { custom_text: customText.trim() }
+      : undefined;
+
+    addItem(product, quantity, selectedColor || undefined, customAttributes);
     setJustAdded(true);
     setTimeout(() => setJustAdded(false), 2200);
   };
@@ -60,6 +68,38 @@ export default function ProductDetailClient({ product }: ProductDetailClientProp
               );
             })}
           </div>
+        </div>
+      )}
+
+      {/* Personalization Section (Only if allow_personalization is true) */}
+      {product.allow_personalization && (
+        <div className="p-4 rounded-2xl bg-sand-100/70 dark:bg-stone-900/90 border border-sand-300/80 dark:border-stone-800 space-y-2.5">
+          <div className="flex items-center justify-between">
+            <label
+              htmlFor="product-personalization-text"
+              className="text-xs font-bold text-stone-900 dark:text-brass-400 flex items-center gap-1.5"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-brass-600 dark:text-brass-400 shrink-0" />
+              <span>{personalizationLabel}</span>
+            </label>
+            <span className="text-[11px] font-mono text-stone-400 dark:text-stone-500" dir="ltr">
+              {customText.length} / {maxChars}
+            </span>
+          </div>
+
+          <input
+            id="product-personalization-text"
+            type="text"
+            value={customText}
+            maxLength={maxChars}
+            onChange={(e) => setCustomText(e.target.value)}
+            placeholder="مثال: منى & أحمد أو عبارة إهداء خاصة..."
+            className="w-full px-3.5 py-2.5 rounded-xl border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-950 text-stone-900 dark:text-white text-xs placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-900 dark:focus:ring-brass-400 transition-all shadow-xs"
+          />
+
+          <p className="text-[10px] text-stone-500 dark:text-stone-400 leading-normal">
+            ✨ يتم كتابة وتثبيت النقش يدويًا على القطعة الخرسانية بدقة ومحبة.
+          </p>
         </div>
       )}
 

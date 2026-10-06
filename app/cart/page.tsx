@@ -109,12 +109,12 @@ export default function CartPage() {
         
         {/* Items List */}
         <div className="lg:col-span-7 space-y-3 sm:space-y-4">
-          {items.map(({ product, quantity, selected_color }) => {
+          {items.map(({ product, quantity, selected_color, custom_attributes }, index) => {
             const itemTotal = product.price * quantity;
 
             return (
               <div
-                key={`${product.id}-${selected_color || ''}`}
+                key={`${product.id}-${selected_color || ''}-${custom_attributes?.custom_text || ''}-${index}`}
                 className="flex gap-3 sm:gap-4 p-3 sm:p-5 rounded-2xl sm:rounded-3xl bg-white dark:bg-stone-900 border border-stone-200/90 dark:border-stone-800 shadow-sm"
               >
                 {/* Product Thumbnail: Exactly 64x64 on mobile, 80x80 on sm */}
@@ -148,7 +148,7 @@ export default function CartPage() {
                       </Link>
                       <button
                         type="button"
-                        onClick={() => removeItem(product.id)}
+                        onClick={() => removeItem(product.id, selected_color, custom_attributes)}
                         className="text-stone-400 hover:text-rose-600 transition-colors p-1 shrink-0"
                         aria-label="حذف القطعة"
                       >
@@ -162,6 +162,13 @@ export default function CartPage() {
                       </div>
                     )}
 
+                    {custom_attributes?.custom_text && (
+                      <div className="text-[10px] sm:text-[11px] text-brass-700 dark:text-brass-400 mt-1 font-medium flex items-center gap-1 bg-brass-500/10 dark:bg-brass-500/15 px-2 py-0.5 rounded-lg w-fit">
+                        <Sparkles className="w-3 h-3 text-brass-600 dark:text-brass-400 shrink-0" />
+                        <span>النقش: <strong className="font-bold text-stone-900 dark:text-white">{custom_attributes.custom_text}</strong></span>
+                      </div>
+                    )}
+
                     <div className="text-[11px] sm:text-xs text-stone-500 dark:text-stone-400 mt-0.5 font-mono whitespace-nowrap">
                       {formatPrice(product.price)} × {quantity}
                     </div>
@@ -172,7 +179,7 @@ export default function CartPage() {
                     <div className="flex items-center bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-xl p-0.5 shrink-0">
                       <button
                         type="button"
-                        onClick={() => updateQuantity(product.id, quantity - 1)}
+                        onClick={() => updateQuantity(product.id, quantity - 1, selected_color, custom_attributes)}
                         className="w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center rounded-lg text-stone-600 dark:text-stone-300 hover:bg-stone-200 dark:hover:bg-stone-700"
                         aria-label="إنقاص الكمية"
                       >
@@ -183,7 +190,7 @@ export default function CartPage() {
                       </span>
                       <button
                         type="button"
-                        onClick={() => updateQuantity(product.id, quantity + 1)}
+                        onClick={() => updateQuantity(product.id, quantity + 1, selected_color, custom_attributes)}
                         disabled={quantity >= product.stock}
                         className="w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center rounded-lg text-stone-600 dark:text-stone-300 hover:bg-stone-200 dark:hover:bg-stone-700 disabled:opacity-30"
                         aria-label="زيادة الكمية"
